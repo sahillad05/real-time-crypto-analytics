@@ -148,7 +148,8 @@ def main():
         logger.info(f"  API → {len(raw_data)} raw → {len(df)} cleaned → {inserted} stored ({skipped} duplicates)")
         logger.info(f"{'='*80}")
     elif args.schedule:
-        logger.info("Scheduled pipeline will be available in Chunk 5.")
+        from scheduler.jobs import start_scheduler
+        start_scheduler()
     elif args.dashboard:
         logger.info("Dashboard will be available in Chunk 6.")
     else:
