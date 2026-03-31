@@ -67,9 +67,10 @@ def main():
         logger.info("Database initialization will be available in Chunk 4.")
     elif args.ingest:
         from ingestion.coingecko_client import CoinGeckoClient
-        import json
+        from processing.data_cleaner import DataCleaner
 
         client = CoinGeckoClient()
+        cleaner = DataCleaner()
 
         # Test connectivity first
         logger.info("Testing API connectivity...")
@@ -77,30 +78,48 @@ def main():
             logger.error("Cannot reach CoinGecko API. Check your internet connection.")
             sys.exit(1)
 
-        # Fetch market data for tracked coins
-        logger.info("Fetching market data for tracked coins...")
-        data = client.fetch_tracked_coins()
+        # Step 1: Fetch raw market data
+        logger.info("Step 1: Fetching market data for tracked coins...")
+        raw_data = client.fetch_tracked_coins()
 
-        if data:
-            logger.info(f"\n{'='*80}")
-            logger.info(f"  {'Coin':<15} {'Price (USD)':>12} {'24h Change':>12} {'Market Cap':>18} {'Volume':>18}")
-            logger.info(f"  {'-'*75}")
-            for coin in data:
-                price = coin.get("current_price", 0)
-                change_24h = coin.get("price_change_percentage_24h", 0) or 0
-                market_cap = coin.get("market_cap", 0)
-                volume = coin.get("total_volume", 0)
-                arrow = "▲" if change_24h >= 0 else "▼"
-
-                logger.info(
-                    f"  {coin['name']:<15} ${price:>11,.2f} "
-                    f"{arrow} {change_24h:>+.2f}% "
-                    f"${market_cap:>16,.0f} ${volume:>16,.0f}"
-                )
-            logger.info(f"{'='*80}")
-            logger.info(f"Total coins fetched: {len(data)}")
-        else:
+        if not raw_data:
             logger.error("Failed to fetch market data.")
+            sys.exit(1)
+
+        logger.info(f"Fetched {len(raw_data)} raw records")
+
+        # Step 2: Clean and transform data
+        logger.info("Step 2: Cleaning and transforming data...")
+        df = cleaner.clean_market_data(raw_data)
+
+        if df is None or df.empty:
+            logger.error("Data cleaning failed — no valid records produced.")
+            sys.exit(1)
+
+        # Display cleaned data summary
+        summary = cleaner.get_summary(df)
+        logger.info(f"\n{'='*80}")
+        logger.info("  CLEANED DATA SUMMARY")
+        logger.info(f"{'='*80}")
+        logger.info(f"  Records    : {summary['total_records']}")
+        logger.info(f"  Columns    : {summary['columns']}")
+        logger.info(f"  Null %     : {summary['null_percentage']:.2f}%")
+        logger.info(f"  Price range: ${summary['price_range']['min']:,.2f} — ${summary['price_range']['max']:,.2f}")
+        logger.info(f"{'='*80}")
+
+        # Display formatted table
+        logger.info(f"\n  {'Coin':<15} {'Price (USD)':>12} {'1h %':>8} {'24h %':>8} {'7d %':>8} {'Vol/MCap':>10}")
+        logger.info(f"  {'-'*71}")
+        for _, row in df.iterrows():
+            logger.info(
+                f"  {row['name']:<15} ${row['current_price']:>11,.2f} "
+                f"{row.get('price_change_pct_1h', 0):>+7.2f}% "
+                f"{row.get('price_change_pct_24h', 0):>+7.2f}% "
+                f"{row.get('price_change_pct_7d', 0):>+7.2f}% "
+                f"{row.get('volume_to_mcap_ratio', 0):>9.4f}"
+            )
+        logger.info(f"{'='*80}")
+        logger.info("Data ingestion + cleaning complete. Ready for database storage (Chunk 4).")
     elif args.schedule:
         logger.info("Scheduled pipeline will be available in Chunk 5.")
     elif args.dashboard:
