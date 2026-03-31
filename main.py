@@ -64,7 +64,18 @@ def main():
     logger.info("=" * 60)
 
     if args.init_db:
-        logger.info("Database initialization will be available in Chunk 4.")
+        from database.connection import init_database, test_connection
+
+        logger.info("Testing database connection...")
+        if not test_connection():
+            logger.error(
+                "Cannot connect to PostgreSQL. Check your DATABASE_URL in .env\n"
+                "  Expected format: postgresql://user:password@host:port/dbname"
+            )
+            sys.exit(1)
+
+        init_database()
+        logger.info("Database initialized successfully! Tables are ready.")
     elif args.ingest:
         from ingestion.coingecko_client import CoinGeckoClient
         from processing.data_cleaner import DataCleaner
@@ -119,7 +130,23 @@ def main():
                 f"{row.get('volume_to_mcap_ratio', 0):>9.4f}"
             )
         logger.info(f"{'='*80}")
-        logger.info("Data ingestion + cleaning complete. Ready for database storage (Chunk 4).")
+
+        # Step 3: Store in PostgreSQL
+        logger.info("Step 3: Storing data in PostgreSQL...")
+        from database.connection import test_connection, get_session
+        from database.models import insert_market_data
+
+        if not test_connection():
+            logger.error("Cannot connect to database. Run 'python main.py --init-db' first.")
+            sys.exit(1)
+
+        with get_session() as session:
+            inserted, skipped = insert_market_data(session, df)
+
+        logger.info(f"{'='*80}")
+        logger.info(f"  PIPELINE COMPLETE")
+        logger.info(f"  API → {len(raw_data)} raw → {len(df)} cleaned → {inserted} stored ({skipped} duplicates)")
+        logger.info(f"{'='*80}")
     elif args.schedule:
         logger.info("Scheduled pipeline will be available in Chunk 5.")
     elif args.dashboard:

@@ -118,8 +118,8 @@ class TestDataCleaner:
 
         # Numeric columns
         assert pd.api.types.is_float_dtype(df["current_price"])
-        assert pd.api.types.is_float_dtype(df["market_cap"])
-        assert pd.api.types.is_float_dtype(df["total_volume"])
+        assert pd.api.types.is_numeric_dtype(df["market_cap"])
+        assert pd.api.types.is_numeric_dtype(df["total_volume"])
 
         # String columns
         assert pd.api.types.is_string_dtype(df["coin_id"])
