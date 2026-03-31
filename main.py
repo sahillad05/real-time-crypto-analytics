@@ -151,7 +151,14 @@ def main():
         from scheduler.jobs import start_scheduler
         start_scheduler()
     elif args.dashboard:
-        logger.info("Dashboard will be available in Chunk 6.")
+        import subprocess
+        logger.info("Launching Streamlit dashboard...")
+        logger.info("Dashboard URL: http://localhost:8501")
+        subprocess.run([
+            sys.executable, "-m", "streamlit", "run",
+            "dashboard/app.py",
+            "--server.headless=true",
+        ])
     else:
         parser.print_help()
         logger.info("\nSystem initialized successfully. Use flags above to run components.")
