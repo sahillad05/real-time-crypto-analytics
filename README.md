@@ -66,35 +66,40 @@ This system provides end-to-end cryptocurrency market analytics by:
 real-time-crypto-analytics/
 ├── config/
 │   ├── __init__.py
-│   └── settings.py          # Configuration & environment variables
+│   └── settings.py              # Configuration & environment variables
 ├── ingestion/
 │   ├── __init__.py
-│   └── coingecko_client.py  # CoinGecko API client
+│   └── coingecko_client.py      # CoinGecko API client with rate limiting
 ├── processing/
 │   ├── __init__.py
-│   └── data_cleaner.py      # Data cleaning & transformation
+│   └── data_cleaner.py          # Data cleaning & transformation pipeline
 ├── database/
 │   ├── __init__.py
-│   ├── models.py            # SQLAlchemy ORM models
-│   ├── connection.py        # Database connection manager
-│   └── queries.py           # Analytics SQL queries
+│   ├── models.py                # SQLAlchemy ORM models
+│   ├── connection.py            # Database connection manager
+│   └── queries.py               # Analytics SQL queries
 ├── dashboard/
 │   ├── __init__.py
-│   └── app.py               # Streamlit dashboard application
+│   └── app.py                   # Streamlit dashboard application
 ├── scheduler/
 │   ├── __init__.py
-│   └── jobs.py              # Scheduled ingestion jobs
+│   └── jobs.py                  # APScheduler automated ingestion
 ├── tests/
 │   ├── __init__.py
 │   ├── test_ingestion.py
 │   ├── test_processing.py
 │   └── test_database.py
-├── .env.example              # Environment variables template
-├── .gitignore                # Git ignore rules
-├── environment.yml           # Conda environment file
-├── requirements.txt          # pip dependencies
-├── main.py                   # Application entry point
-└── README.md                 # Project documentation
+├── screenshots/                  # Dashboard screenshots
+├── .streamlit/
+│   └── config.toml              # Streamlit theme configuration
+├── .env.example                  # Environment variables template
+├── .gitignore                    # Git ignore rules
+├── environment.yml               # Conda environment file
+├── requirements.txt              # pip dependencies
+├── Procfile                      # Render deployment config
+├── build.sh                      # Render build script
+├── main.py                       # Application entry point
+└── README.md                     # Project documentation
 ```
 
 ## ⚙️ Setup & Installation
@@ -124,7 +129,7 @@ conda activate crypto-analytics
 
 ```bash
 cp .env.example .env
-# Edit .env with your database credentials and API settings
+# Edit .env with your database credentials
 ```
 
 ### 4. Initialize Database
@@ -136,10 +141,13 @@ python main.py --init-db
 ### 5. Run the Application
 
 ```bash
-# Start data ingestion
+# Single data ingestion cycle
 python main.py --ingest
 
-# Launch dashboard
+# Start automated pipeline (every 5 min)
+python main.py --schedule
+
+# Launch dashboard (separate terminal)
 streamlit run dashboard/app.py
 ```
 
@@ -152,16 +160,70 @@ All configuration is managed via environment variables. See `.env.example` for a
 | `DATABASE_URL`   | PostgreSQL connection string   | `postgresql://...`   |
 | `API_BASE_URL`   | CoinGecko API base URL         | `https://api.coingecko.com/api/v3` |
 | `FETCH_INTERVAL` | Data fetch interval (seconds)  | `300`                |
+| `COINS`          | Comma-separated coin IDs       | `bitcoin,ethereum,...`|
 | `LOG_LEVEL`      | Logging level                  | `INFO`               |
 
-## 🚀 Deployment
+## 🖥️ Usage
 
-The application is deployed on **Render**. See deployment instructions in the [Deployment Guide](docs/deployment.md).
+### Running the Full System Locally
+
+Open **two terminal windows**:
+
+**Terminal 1 — Data Pipeline (keep running):**
+```bash
+conda activate crypto-analytics
+python main.py --schedule
+```
+
+**Terminal 2 — Dashboard:**
+```bash
+conda activate crypto-analytics
+streamlit run dashboard/app.py
+```
+
+### CLI Commands
+
+| Command | Description |
+|---|---|
+| `python main.py --init-db` | Create database tables |
+| `python main.py --ingest` | Run one ingestion cycle |
+| `python main.py --schedule` | Start automated pipeline |
+| `python main.py --dashboard` | Launch Streamlit dashboard |
+
+## 🚀 Deployment on Render
+
+### Architecture for Deployment
+
+```
+Render Web Service (Dashboard)  ←→  Render PostgreSQL (Cloud DB)
+         ↑                                    ↑
+    Streamlit App                    Render Cron Job (Scheduler)
+                                    fetches data every 5 min
+```
+
+> **Note:** On Render, a cloud PostgreSQL database is used instead of localhost.
+
+### Step-by-Step Deployment Guide
+
+See detailed deployment instructions below in the **Deployment** section.
 
 ## 📸 Screenshots
 
-*Screenshots will be added after dashboard development.*
+### Dashboard Overview
+![Dashboard Overview](screenshots/dashboard_overview.png)
+
+### Price Charts
+![Price Charts](screenshots/price_charts.png)
+
+### Market Comparison
+![Market Comparison](screenshots/market_comparison.png)
+
+### Pipeline Output
+![Pipeline Output](screenshots/pipeline_output.png)
+
+> **To add screenshots:** Save your screenshots as `.png` files in the `screenshots/` folder with the names shown above.
 
 ## 📄 License
 
 This project is licensed under the MIT License.
+
