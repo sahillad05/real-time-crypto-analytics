@@ -221,7 +221,6 @@ See detailed deployment instructions below in the **Deployment** section.
 ### Pipeline Output
 ![Pipeline Output](screenshots/pipeline_output.png)
 
-> **To add screenshots:** Save your screenshots as `.png` files in the `screenshots/` folder with the names shown above.
 
 ## 📄 License
 
